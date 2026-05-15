@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp, getDocs, collection } from "firebase/firestore";
 
 const app = initializeApp({
     apiKey: "AIzaSyBld8X5SlhZVZErwjmAurP6ByRMfbsjDP0",
@@ -18,7 +18,7 @@ const users = [
     { uid: "eGroY1qAS5YALDcNPQuIFwhuzih1", displayName: "daksh", role: "admin" },
     { uid: "SRBZoBhjIGXGCYalmwfhhRg9myz2", displayName: "greendesk", role: "user" },
     { uid: "3wDZ6JrFn9dsCXtda7QFEBA4liQ2", displayName: "RajuBoi69", role: "user" },
-
+    { uid: "i0kPZG59xWQL2VyNqos6NX9def42", displayName: "exvp💔", role: "user" }
 ];
 
 async function seed() {
@@ -27,6 +27,16 @@ async function seed() {
         await setDoc(doc(db, "users", u.uid), { displayName: u.displayName, role: u.role, balance: 10000, portfolio: {}, createdAt: serverTimestamp() });
         console.log(`✓ User: ${u.displayName}`);
     }
+
+    // Delete all trades
+    const tradesSnap = await getDocs(collection(db, "trades"));
+    for (const d of tradesSnap.docs) await deleteDoc(d.ref);
+    console.log("✓ Cleared all trades");
+
+    // Delete all parlays
+    const parlaysSnap = await getDocs(collection(db, "parlays"));
+    for (const d of parlaysSnap.docs) await deleteDoc(d.ref);
+    console.log("✓ Cleared all parlays");
 
     // Delete old individual gensec/jointsec markets
     for (const c of CANDIDATES) {

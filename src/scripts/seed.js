@@ -11,8 +11,8 @@ const app = initializeApp({
 });
 const db = getFirestore(app);
 
-const CANDIDATES = ["arshita", "guramant", "lorena", "nandinee", "princy", "raghav", "sarthak", "yashika"];
-const CAND_NAMES = { arshita: "Arshita", guramant: "Guramant Kaur", lorena: "Lorena Kundalwal", nandinee: "Nandinee Patel", princy: "Princy Sanghvi", raghav: "Raghav Bansal", sarthak: "Sarthak Jain", yashika: "Yashika Juyal" };
+const CANDIDATES = ["arshita", "guramant", "lorena", "raghav", "sarthak"];
+const CAND_NAMES = { arshita: "Arshita", guramant: "Guramant Kaur", lorena: "Lorena Kundalwal", raghav: "Raghav Bansal", sarthak: "Sarthak Jain" };
 
 const users = [
     { uid: "eGroY1qAS5YALDcNPQuIFwhuzih1", displayName: "daksh", role: "admin" },
@@ -22,6 +22,8 @@ const users = [
     { uid: "5HhW9AH8efPyDOO7kmyXKVrymT73", displayName: "ankita", role: "user" },
     { uid: "KST9QWNvyYa9TtswddThBT5Cjg62", displayName: "riddhima", role: "user" },
     { uid: "DolWy4Nz8SNvLQzECQ4gVsmIBOi2", displayName: "sail", role: "user" }
+    { uid: "yAv4xd5t68dbpQAdtqsBRxfxInu2", displayName: "Kaccha_Potato", role: "user" },
+    { uid: "vrpmYH9rw3MheGSF8maCyeUCNJy1", displayName: "samykat", role: "user" }
 ];
 
 async function seed() {
@@ -85,6 +87,8 @@ async function seed() {
         { id: "side_comeback", title: "Will someone have a comeback during grilling?" },
         { id: "side_darkhorse", title: "Will a sub-15% candidate win Gen Sec?" },
         { id: "side_mostvotes", title: "Will the Coordinator winner get 70%+ votes?" },
+        { id: "side_greatspeech", title: 'Will someone say "great speech" before questioning?' },
+        { id: "side_cryqna", title: "Will someone cry during qna?" },
     ];
     for (const s of sides) {
         await setDoc(doc(db, "markets", s.id), {

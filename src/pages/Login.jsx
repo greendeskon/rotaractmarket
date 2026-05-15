@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { auth } from "../firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "../firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { doc, setDoc } from "firebase/firestore";
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -11,15 +12,30 @@ export default function Login() {
     const [loading, setLoading] = useState(false);
     const { user } = useAuth();
 
+    const [isSignUp, setIsSignUp] = useState(false);
+    const [username, setUsername] = useState("");
+
     if (user) return <Navigate to="/markets" replace />;
 
-    async function handleLogin() {
+    async function handleSubmit() {
+        if (isSignUp && !username.trim()) {
+            setError("Please enter a username");
+            return;
+        }
         setLoading(true);
         setError("");
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-        } catch {
-            setError("Invalid email or password");
+            if (isSignUp) {
+                const res = await createUserWithEmailAndPassword(auth, email, password);
+                await updateProfile(res.user, { displayName: username.trim() });
+                await setDoc(doc(db, "users", res.user.uid), { displayName: username.trim() }, { merge: true });
+            } else {
+                await signInWithEmailAndPassword(auth, email, password);
+            }
+        } catch (e) {
+            setError(e.code === "auth/email-already-in-use" ? "Email already exists" : 
+                     e.code === "auth/weak-password" ? "Password must be at least 6 characters" :
+                     "Invalid email or password");
             setLoading(false);
         }
     }
@@ -47,23 +63,40 @@ export default function Login() {
                 width: 320, display: "flex", flexDirection: "column", gap: 12,
                 border: "1px solid #1e1e24",
             }}>
+                {isSignUp && (
+                    <input placeholder="Username" value={username} onChange={e => setUsername(e.target.value)}
+                        style={input} onFocus={e => e.target.style.borderColor = "#818cf8"}
+                        onBlur={e => e.target.style.borderColor = "#27272a"} />
+                )}
                 <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}
                     style={input} onFocus={e => e.target.style.borderColor = "#818cf8"}
                     onBlur={e => e.target.style.borderColor = "#27272a"} />
                 <input placeholder="Password" type="password" value={password}
                     onChange={e => setPassword(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && handleLogin()}
+                    onKeyDown={e => e.key === "Enter" && handleSubmit()}
                     style={input} onFocus={e => e.target.style.borderColor = "#818cf8"}
                     onBlur={e => e.target.style.borderColor = "#27272a"} />
                 {error && <p style={{ color: "#f87171", margin: 0, fontSize: 13 }}>{error}</p>}
-                <button onClick={handleLogin} disabled={loading} style={{
+                <button onClick={handleSubmit} disabled={loading} style={{
                     background: "#818cf8", color: "#09090b", border: "none",
                     borderRadius: 8, padding: "11px 0", fontWeight: 600,
                     fontSize: 14, cursor: "pointer", opacity: loading ? 0.6 : 1,
                     transition: "opacity 0.15s",
+                    marginTop: 4
                 }}>
-                    {loading ? "Signing in…" : "Sign In"}
+                    {loading ? (isSignUp ? "Creating account…" : "Signing in…") : (isSignUp ? "Create Account" : "Sign In")}
                 </button>
+                <div style={{ textAlign: "center", marginTop: 8 }}>
+                    <span style={{ color: "#71717a", fontSize: 13 }}>
+                        {isSignUp ? "Already have an account? " : "Don't have an account? "}
+                    </span>
+                    <button onClick={() => { setIsSignUp(!isSignUp); setError(""); }} style={{
+                        background: "none", border: "none", color: "#818cf8", fontSize: 13,
+                        fontWeight: 600, cursor: "pointer", padding: 0, textDecoration: "underline"
+                    }}>
+                        {isSignUp ? "Sign In" : "Sign Up"}
+                    </button>
+                </div>
             </div>
         </div>
     );

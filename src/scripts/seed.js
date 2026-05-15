@@ -18,7 +18,9 @@ const users = [
     { uid: "eGroY1qAS5YALDcNPQuIFwhuzih1", displayName: "daksh", role: "admin" },
     { uid: "SRBZoBhjIGXGCYalmwfhhRg9myz2", displayName: "greendesk", role: "user" },
     { uid: "3wDZ6JrFn9dsCXtda7QFEBA4liQ2", displayName: "RajuBoi69", role: "user" },
-    { uid: "i0kPZG59xWQL2VyNqos6NX9def42", displayName: "exvp💔", role: "user" }
+    { uid: "y5TyDzw8BTdq9Bj3RQSvS5hxvnt2", displayName: "exvp💔", role: "user" },
+    { uid: "5HhW9AH8efPyDOO7kmyXKVrymT73", displayName: "ankita", role: "user" },
+    { uid: "KST9QWNvyYa9TtswddThBT5Cjg62", displayName: "riddhima", role: "user" },
 ];
 
 async function seed() {

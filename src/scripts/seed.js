@@ -22,7 +22,7 @@ const users = [
     { uid: "5HhW9AH8efPyDOO7kmyXKVrymT73", displayName: "ankita", role: "user" },
     { uid: "KST9QWNvyYa9TtswddThBT5Cjg62", displayName: "riddhima", role: "user" },
     { uid: "DolWy4Nz8SNvLQzECQ4gVsmIBOi2", displayName: "sail", role: "user" },
-    { uid: "yAv4xd5t68dbpQAdtqsBRxfxInu2", displayName: "Kaccha_Potato", role: "user" },
+    { uid: "T58v6pYJTRTOOrL2hDGvC5i0xGV2", displayName: "Kaccha_Potato", role: "user" },
     { uid: "vrpmYH9rw3MheGSF8maCyeUCNJy1", displayName: "samykat", role: "user" }
 ];
 

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { auth, db } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
 
 const AuthContext = createContext();
 
@@ -22,12 +22,16 @@ export function AuthProvider({ children }) {
                 unsubUserDoc = onSnapshot(doc(db, "users", firebaseUser.uid), (snap) => {
                     if (snap.exists()) {
                         setUserData({ uid: firebaseUser.uid, ...snap.data() });
+                        setLoading(false);
                     } else {
-                        setUserData({ uid: firebaseUser.uid, displayName: firebaseUser.email, role: "user", balance: 10000, portfolio: {} });
+                        const newUserData = { displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "Anon", role: "user", balance: 10000, portfolio: {}, createdAt: serverTimestamp() };
+                        setDoc(doc(db, "users", firebaseUser.uid), newUserData).catch(console.error);
+                        setUserData({ uid: firebaseUser.uid, ...newUserData });
+                        setLoading(false);
                     }
-                    setLoading(false);
-                }, () => {
-                    setUserData({ uid: firebaseUser.uid, displayName: firebaseUser.email, role: "user", balance: 10000, portfolio: {} });
+                }, (error) => {
+                    console.error("Auth snapshot error", error);
+                    setUserData({ uid: firebaseUser.uid, displayName: firebaseUser.displayName || firebaseUser.email, role: "user", balance: 10000, portfolio: {} });
                     setLoading(false);
                 });
             } else {

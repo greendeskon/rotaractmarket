@@ -11,12 +11,14 @@ const app = initializeApp({
 });
 const db = getFirestore(app);
 
-const CANDIDATES = ["arshita","guramant","lorena","nandinee","princy","raghav","sarthak","yashika"];
-const CAND_NAMES = { arshita:"Arshita", guramant:"Guramant Kaur", lorena:"Lorena Kundalwal", nandinee:"Nandinee Patel", princy:"Princy Sanghvi", raghav:"Raghav Bansal", sarthak:"Sarthak Jain", yashika:"Yashika Juyal" };
+const CANDIDATES = ["arshita", "guramant", "lorena", "nandinee", "princy", "raghav", "sarthak", "yashika"];
+const CAND_NAMES = { arshita: "Arshita", guramant: "Guramant Kaur", lorena: "Lorena Kundalwal", nandinee: "Nandinee Patel", princy: "Princy Sanghvi", raghav: "Raghav Bansal", sarthak: "Sarthak Jain", yashika: "Yashika Juyal" };
 
 const users = [
     { uid: "eGroY1qAS5YALDcNPQuIFwhuzih1", displayName: "daksh", role: "admin" },
     { uid: "SRBZoBhjIGXGCYalmwfhhRg9myz2", displayName: "greendesk", role: "user" },
+    { uid: "3wDZ6JrFn9dsCXtda7QFEBA4liQ2", displayName: "RajuBoi69", role: "user" },
+
 ];
 
 async function seed() {
@@ -29,14 +31,14 @@ async function seed() {
     // Delete old individual gensec/jointsec markets
     for (const c of CANDIDATES) {
         for (const prefix of ["gensec_", "jointsec_"]) {
-            await deleteDoc(doc(db, "markets", prefix + c)).catch(() => {});
+            await deleteDoc(doc(db, "markets", prefix + c)).catch(() => { });
         }
     }
     console.log("✓ Cleaned old markets");
 
     // Coordinator — binary YES/NO (multi-winner, top 2)
-    const coordCandidates = ["arshita","dipanshi","lorena","pari","raghav"];
-    const coordNames = { arshita:"Arshita", dipanshi:"Dipanshi Goel", lorena:"Lorena Kundalwal", pari:"Pari Aggarwal", raghav:"Raghav Bansal" };
+    const coordCandidates = ["arshita", "dipanshi", "lorena", "pari", "raghav"];
+    const coordNames = { arshita: "Arshita", dipanshi: "Dipanshi Goel", lorena: "Lorena Kundalwal", pari: "Pari Aggarwal", raghav: "Raghav Bansal" };
     for (const c of coordCandidates) {
         await setDoc(doc(db, "markets", "coord_" + c), {
             title: `${coordNames[c]} makes top 2`, category: "coordinator", type: "binary",

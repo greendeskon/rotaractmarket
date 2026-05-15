@@ -21,6 +21,7 @@ const users = [
     { uid: "y5TyDzw8BTdq9Bj3RQSvS5hxvnt2", displayName: "exvp💔", role: "user" },
     { uid: "5HhW9AH8efPyDOO7kmyXKVrymT73", displayName: "ankita", role: "user" },
     { uid: "KST9QWNvyYa9TtswddThBT5Cjg62", displayName: "riddhima", role: "user" },
+    { uid: "DolWy4Nz8SNvLQzECQ4gVsmIBOi2", displayName: "sail", role: "user" }
 ];
 
 async function seed() {

@@ -27,10 +27,22 @@ const users = [
 ];
 
 async function seed() {
-    // Users
+    // Fetch all dynamically created users and reset them
+    const allUsersSnap = await getDocs(collection(db, "users"));
+    const existingUids = new Set();
+    
+    for (const d of allUsersSnap.docs) {
+        existingUids.add(d.id);
+        await setDoc(doc(db, "users", d.id), { balance: 10000, portfolio: {} }, { merge: true });
+        console.log(`✓ Reset User: ${d.data().displayName || d.id}`);
+    }
+
+    // Ensure hardcoded seed users exist just in case
     for (const u of users) {
-        await setDoc(doc(db, "users", u.uid), { displayName: u.displayName, role: u.role, balance: 10000, portfolio: {}, createdAt: serverTimestamp() });
-        console.log(`✓ User: ${u.displayName}`);
+        if (!existingUids.has(u.uid)) {
+            await setDoc(doc(db, "users", u.uid), { displayName: u.displayName, role: u.role, balance: 10000, portfolio: {}, createdAt: serverTimestamp() });
+            console.log(`✓ Created User: ${u.displayName}`);
+        }
     }
 
     // Delete all trades

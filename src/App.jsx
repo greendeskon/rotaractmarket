@@ -7,6 +7,7 @@ import Leaderboard from "./pages/Leaderboard";
 import Portfolio from "./pages/Portfolio";
 import Admin from "./pages/Admin";
 import MarketDetail from "./pages/MarketDetail";
+import Profile from "./pages/Profile";
 import Navbar from "./components/Navbar";
 import ParlayBar from "./components/ParlayBar";
 
@@ -37,6 +38,7 @@ export default function App() {
                     <Route path="/markets/:id" element={<ProtectedRoute><Shell><MarketDetail /></Shell></ProtectedRoute>} />
                     <Route path="/leaderboard" element={<ProtectedRoute><Shell><Leaderboard /></Shell></ProtectedRoute>} />
                     <Route path="/portfolio" element={<ProtectedRoute><Shell><Portfolio /></Shell></ProtectedRoute>} />
+                    <Route path="/profile" element={<ProtectedRoute><Shell><Profile /></Shell></ProtectedRoute>} />
                     <Route path="/admin" element={<AdminRoute><Shell><Admin /></Shell></AdminRoute>} />
                     <Route path="*" element={<Navigate to="/markets" replace />} />
                 </Routes>

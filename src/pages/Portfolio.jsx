@@ -81,6 +81,11 @@ export default function Portfolio() {
     const totalVal = positions.reduce((s, p) => s + p.currentValue, 0);
     const totalPnl = positions.reduce((s, p) => s + p.pnl, 0);
 
+    const allTimePnl = myTrades.filter(t => t.realizedPnl !== undefined).reduce((s, t) => s + t.realizedPnl, 0);
+    const winRateData = myTrades.filter(t => t.type === "settlement");
+    const wins = winRateData.filter(t => t.realizedPnl > 0).length;
+    const winRate = winRateData.length > 0 ? Math.round((wins / winRateData.length) * 100) : 0;
+
     return (
         <div style={{ background: "#09090b", minHeight: "100vh" }}>
             <div style={{ maxWidth: 580, margin: "0 auto", padding: "28px 16px 60px" }}>
@@ -89,7 +94,7 @@ export default function Portfolio() {
                 <div style={{ display: "flex", gap: 8, marginBottom: 28 }}>
                     <SC label="Balance" value={`₹${(userData?.balance ?? 0).toLocaleString()}`} color="#e4e4e7" />
                     <SC label="Invested" value={`₹${totalVal.toFixed(0)}`} color="#818cf8" />
-                    <SC label="P&L" value={`${totalPnl >= 0 ? "+" : ""}₹${totalPnl.toFixed(0)}`} color={totalPnl >= 0 ? "#34d399" : "#f87171"} />
+                    <SC label="Unrealized P&L" value={`${totalPnl >= 0 ? "+" : ""}₹${totalPnl.toFixed(0)}`} color={totalPnl >= 0 ? "#34d399" : "#f87171"} />
                 </div>
 
                 <PortfolioChart balance={userData?.balance} positions={positions} />
@@ -140,18 +145,44 @@ export default function Portfolio() {
                     </Sec>
                 )}
 
-                <Sec title="TRADE HISTORY">
-                    {myTrades.length === 0 ? <Empty text="No trades yet" /> : myTrades.slice(0, 30).map((t, i) => {
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 10 }}>
+                    <div style={{ color: "#71717a", fontSize: 11, fontWeight: 600, letterSpacing: 0.5 }}>PERFORMANCE HISTORY</div>
+                    <div style={{ display: "flex", gap: 12 }}>
+                        {winRateData.length > 0 && <div style={{ fontSize: 11, color: "#a1a1aa" }}>Win Rate: <span style={{ color: "#e4e4e7", fontWeight: 700 }}>{winRate}%</span></div>}
+                        {allTimePnl !== 0 && <div style={{ fontSize: 11, color: "#a1a1aa" }}>All-Time: <span style={{ color: allTimePnl >= 0 ? "#34d399" : "#f87171", fontWeight: 700 }}>{allTimePnl >= 0 ? "+" : ""}₹{allTimePnl.toFixed(0)}</span></div>}
+                    </div>
+                </div>
+                
+                <div style={{ marginBottom: 24 }}>
+                    {myTrades.length === 0 ? <Empty text="No trading activity yet" /> : myTrades.slice(0, 50).map((t, i) => {
                         const m = markets[t.marketId];
                         const label = t.candidate ? `${m?.candidates?.[t.candidate]?.name || t.candidate} — ${m?.title || ""}` : `${t.shares} ${t.side?.toUpperCase()} — ${m?.title || t.marketId}`;
+                        
+                        let actionLabel = "BUY";
+                        let actionColor = "#818cf8";
+                        if (t.type === "sell") { actionLabel = "SELL"; actionColor = "#fbbf24"; }
+                        if (t.type === "settlement") { actionLabel = "SETTLED"; actionColor = "#c084fc"; }
+
                         return (
-                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #141416", fontSize: 13 }}>
-                                <div><span style={{ color: t.type === "buy" ? "#34d399" : "#f87171", fontWeight: 600 }}>{t.type === "buy" ? "BUY" : "SELL"}</span><span style={{ color: "#71717a", marginLeft: 8 }}>{label}</span></div>
-                                <span style={{ color: "#52525b" }}>₹{t.cost?.toFixed(1) || t.payout?.toFixed(1) || "—"}</span>
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #141416", fontSize: 13 }}>
+                                <div style={{ flex: 1, paddingRight: 12 }}>
+                                    <span style={{ color: actionColor, fontWeight: 700, fontSize: 11, background: `${actionColor}15`, padding: "2px 6px", borderRadius: 4, marginRight: 8 }}>{actionLabel}</span>
+                                    <span style={{ color: "#d4d4d8" }}>{label}</span>
+                                </div>
+                                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                    <div style={{ color: "#71717a", fontSize: 12, marginBottom: 2 }}>
+                                        {t.type === "buy" ? `₹${t.cost?.toFixed(1)} Invested` : `₹${t.payout?.toFixed(1)} Payout`}
+                                    </div>
+                                    {t.realizedPnl !== undefined && (
+                                        <div style={{ color: t.realizedPnl >= 0 ? "#34d399" : "#f87171", fontWeight: 700, fontSize: 13 }}>
+                                            {t.realizedPnl >= 0 ? "+" : ""}₹{t.realizedPnl.toFixed(1)}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         );
                     })}
-                </Sec>
+                </div>
             </div>
         </div>
     );

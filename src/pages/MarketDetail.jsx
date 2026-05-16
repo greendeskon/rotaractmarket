@@ -88,13 +88,14 @@ export default function MarketDetail() {
                     if(c.shares-shares<1) throw new Error("Pool minimum");
                     const pa = (c.shares-shares)/(tp-shares);
                     const pay = Math.round(shares*(pb+pa)/2*100)/100;
+                    const realizedPnl = Math.round((pay - (shares * (pos.avgCost || 0))) * 100) / 100;
                     const updated = {...cs}; updated[candidateKey] = {...c, shares:c.shares-shares};
                     const pf = {...u.portfolio};
                     const rem = pos.shares-shares;
                     if(rem<=0) delete pf[pKey]; else pf[pKey] = {...pos, shares:rem};
                     t.update(mRef,{candidates:updated});
                     t.update(uRef,{balance:Math.round((u.balance+pay)*100)/100, portfolio:pf});
-                    rec = {type:"sell",candidate:candidateKey,shares,payout:pay,price:Math.round(pb*100)};
+                    rec = {type:"sell",candidate:candidateKey,shares,payout:pay,price:Math.round(pb*100), realizedPnl};
                 }
             });
             await addDoc(collection(db,"trades"),{userId:user.uid,marketId:id,...rec,timestamp:serverTimestamp()});
@@ -133,12 +134,13 @@ export default function MarketDetail() {
                     if(p2-shares<1) throw new Error("Pool minimum");
                     const pa = (pool-shares)/(tot-shares);
                     const pay = Math.round(shares*(pb+pa)/2*100)/100;
+                    const realizedPnl = Math.round((pay - (shares * (pos.avgCost || 0))) * 100) / 100;
                     const pf = {...u.portfolio};
                     const rem = pos.shares-shares;
                     if(rem<=0) delete pf[id]; else pf[id] = {...pos,shares:rem};
                     t.update(mRef, side==="yes"?{yesShares:m.yesShares-shares}:{noShares:m.noShares-shares});
                     t.update(uRef,{balance:Math.round((u.balance+pay)*100)/100,portfolio:pf});
-                    rec = {type:"sell",side,shares,payout:pay,price:Math.round(pb*100)};
+                    rec = {type:"sell",side,shares,payout:pay,price:Math.round(pb*100), realizedPnl};
                 }
             });
             await addDoc(collection(db,"trades"),{userId:user.uid,marketId:id,...rec,timestamp:serverTimestamp()});
@@ -268,10 +270,39 @@ function Toggle({action,setAction}) {
     </div>;
 }
 function SharesInput({shares,setShares}) {
+    const [val, setVal] = useState(shares.toString());
+    
+    // Sync external changes
+    useEffect(() => {
+        if (shares.toString() !== val && val !== "") setVal(shares.toString());
+    }, [shares]);
+
+    function handleChange(e) {
+        const str = e.target.value;
+        setVal(str);
+        if (str === "") return; // Don't trigger setShares if empty, just wait
+        const num = parseInt(str, 10);
+        if (!isNaN(num) && num >= 1) setShares(num);
+    }
+
+    function handleBlur() {
+        if (val === "" || parseInt(val, 10) < 1) {
+            setVal("1");
+            setShares(1);
+        }
+    }
+
     return <>
-        <input type="number" min={1} value={shares} onChange={e=>setShares(Math.max(1,parseInt(e.target.value)||1))} style={{background:"#0c0c0f",border:"1px solid #27272a",borderRadius:6,padding:"10px 12px",color:"#e4e4e7",fontSize:14,width:"100%",boxSizing:"border-box",outline:"none",marginBottom:8}}/>
+        <input 
+            type="number" 
+            min={1} 
+            value={val} 
+            onChange={handleChange} 
+            onBlur={handleBlur}
+            style={{background:"#0c0c0f",border:"1px solid #27272a",borderRadius:6,padding:"10px 12px",color:"#e4e4e7",fontSize:14,width:"100%",boxSizing:"border-box",outline:"none",marginBottom:8}}
+        />
         <div style={{display:"flex",gap:6,marginBottom:4}}>
-            {[5,10,25,50,100].map(n=><button key={n} onClick={()=>setShares(n)} style={{flex:1,padding:"6px",borderRadius:4,border:shares===n?"1px solid #818cf8":"1px solid #27272a",background:shares===n?"rgba(129,140,248,0.1)":"#0c0c0f",color:shares===n?"#818cf8":"#71717a",fontSize:12,fontWeight:600,cursor:"pointer"}}>{n}</button>)}
+            {[5,10,25,50,100].map(n=><button key={n} onClick={()=>{setVal(n.toString()); setShares(n);}} style={{flex:1,padding:"6px",borderRadius:4,border:shares===n?"1px solid #818cf8":"1px solid #27272a",background:shares===n?"rgba(129,140,248,0.1)":"#0c0c0f",color:shares===n?"#818cf8":"#71717a",fontSize:12,fontWeight:600,cursor:"pointer"}}>{n}</button>)}
         </div>
     </>;
 }

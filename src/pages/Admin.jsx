@@ -30,18 +30,32 @@ export default function Admin() {
         try {
             await updateDoc(doc(db, "markets", marketId), { status: "settled", outcome: winnerKey });
             const batch = writeBatch(db);
+            const settlementTrades = [];
             for (const u of users) {
                 const pf = { ...u.portfolio }; let bal = u.balance || 0; let changed = false;
                 const cands = markets.find(m => m.id === marketId)?.candidates || {};
                 for (const ck of Object.keys(cands)) {
                     const pk = `${marketId}:${ck}`;
                     if (!pf[pk]) continue;
-                    if (ck === winnerKey) { bal += pf[pk].shares; }
+                    const pos = pf[pk];
+                    let payout = 0;
+                    if (ck === winnerKey) { payout = pos.shares; bal += payout; }
+                    
+                    const realizedPnl = Math.round((payout - (pos.shares * (pos.avgCost || 0))) * 100) / 100;
+                    settlementTrades.push({
+                        userId: u.uid, marketId, type: "settlement", candidate: ck, shares: pos.shares,
+                        payout, realizedPnl
+                    });
+
                     delete pf[pk]; changed = true;
                 }
                 if (changed) batch.update(doc(db, "users", u.uid), { balance: Math.round(bal * 100) / 100, portfolio: pf });
             }
             await batch.commit();
+            // We use another batch for trades, or just addDoc in a loop since batch limit is 500
+            for (const st of settlementTrades) {
+                await addDoc(collection(db, "trades"), { ...st, timestamp: new Date() });
+            }
             setMsg(`Settled → ${winnerKey}`); setSettling(null);
         } catch (e) { setMsg("Error: " + e.message); }
         setBusy(false);
@@ -52,14 +66,26 @@ export default function Admin() {
         try {
             await updateDoc(doc(db, "markets", marketId), { status: "settled", outcome });
             const batch = writeBatch(db);
+            const settlementTrades = [];
             for (const u of users) {
                 const pos = u.portfolio?.[marketId];
                 if (!pos) continue;
                 const pf = { ...u.portfolio }; delete pf[marketId];
-                const bal = pos.side === outcome ? (u.balance || 0) + pos.shares : u.balance || 0;
+                const payout = pos.side === outcome ? pos.shares : 0;
+                const bal = (u.balance || 0) + payout;
+                
+                const realizedPnl = Math.round((payout - (pos.shares * (pos.avgCost || 0))) * 100) / 100;
+                settlementTrades.push({
+                    userId: u.uid, marketId, type: "settlement", side: pos.side, shares: pos.shares,
+                    payout, realizedPnl
+                });
+
                 batch.update(doc(db, "users", u.uid), { balance: Math.round(bal * 100) / 100, portfolio: pf });
             }
             await batch.commit();
+            for (const st of settlementTrades) {
+                await addDoc(collection(db, "trades"), { ...st, timestamp: new Date() });
+            }
             setMsg(`Settled ${outcome.toUpperCase()}`); setSettling(null);
         } catch (e) { setMsg("Error: " + e.message); }
         setBusy(false);
@@ -87,7 +113,32 @@ export default function Admin() {
 
                 {msg && <div style={{ padding: "8px 12px", borderRadius: 6, background: "rgba(129,140,248,0.1)", color: "#818cf8", fontSize: 13, marginBottom: 16 }}>{msg}</div>}
 
-                <Sec title="MARKETS">
+                <div style={{ marginBottom: 24 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                        <div style={{ color: "#71717a", fontSize: 11, fontWeight: 600, letterSpacing: 0.5 }}>MARKETS</div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <button disabled={busy} onClick={async () => {
+                                setBusy(true); setMsg("");
+                                try {
+                                    const batch = writeBatch(db);
+                                    markets.filter(m => m.status === "open").forEach(m => batch.update(doc(db, "markets", m.id), { status: "frozen" }));
+                                    await batch.commit();
+                                    setMsg("All open markets frozen");
+                                } catch(e) { setMsg(e.message); }
+                                setBusy(false);
+                            }} style={adminBtn()}>Freeze All</button>
+                            <button disabled={busy} onClick={async () => {
+                                setBusy(true); setMsg("");
+                                try {
+                                    const batch = writeBatch(db);
+                                    markets.filter(m => m.status === "frozen").forEach(m => batch.update(doc(db, "markets", m.id), { status: "open" }));
+                                    await batch.commit();
+                                    setMsg("All frozen markets opened");
+                                } catch(e) { setMsg(e.message); }
+                                setBusy(false);
+                            }} style={adminBtn()}>Unfreeze All</button>
+                        </div>
+                    </div>
                     {sorted.map(m => {
                         const isRace = m.type === "race";
                         const sc = { open: "#34d399", frozen: "#fbbf24", settled: "#52525b" }[m.status];
@@ -123,7 +174,7 @@ export default function Admin() {
                             </div>
                         );
                     })}
-                </Sec>
+                </div>
             </div>
         </div>
     );

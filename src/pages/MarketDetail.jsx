@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { db } from "../firebase";
-import { doc, onSnapshot, runTransaction, collection, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
+import { doc, onSnapshot, runTransaction, collection, addDoc, serverTimestamp, getDocs, query, where } from "firebase/firestore";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useAuth } from "../context/AuthContext";
 import { useParlay } from "../context/ParlayContext";
 
@@ -16,6 +17,16 @@ export default function MarketDetail() {
     const [sel, setSel] = useState(null); // selected candidate key for race
     const [busy, setBusy] = useState(false);
     const [msg, setMsg] = useState(null);
+    const [trades, setTrades] = useState([]);
+
+    useEffect(() => {
+        const unsub = onSnapshot(query(collection(db, "trades"), where("marketId", "==", id)), snap => {
+            const tr = snap.docs.map(d => d.data());
+            tr.sort((a,b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+            setTrades(tr);
+        });
+        return unsub;
+    }, [id]);
 
     useEffect(() => {
         const unsub = onSnapshot(doc(db, "markets", id), s => { if (s.exists()) setMarket({ id: s.id, ...s.data() }); });
@@ -148,6 +159,10 @@ export default function MarketDetail() {
                     <span style={{color:"#52525b",fontSize:12}}>{market.category}</span>
                     <span style={{color:stc[market.status],fontSize:11,fontWeight:600}}>{st[market.status]}</span>
                 </div>
+
+                <Box title="ODDS HISTORY">
+                    <MarketChart market={market} trades={trades} isRace={isRace} yesPrice={yes} />
+                </Box>
 
                 {isRace ? (<>
                     {/* Race chart */}
@@ -286,4 +301,57 @@ function MiniBox({label,value,sub,color}) {
 }
 function Msg({msg}) {
     return <div style={{marginTop:10,padding:"8px 12px",borderRadius:6,fontSize:13,background:msg.ok?"rgba(52,211,153,0.1)":"rgba(248,113,113,0.1)",color:msg.ok?"#34d399":"#f87171"}}>{msg.text}</div>;
+}
+
+function MarketChart({ market, trades, isRace, yesPrice }) {
+    if (!trades || trades.length === 0) {
+        return <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", color: "#52525b", fontSize: 13 }}>No trades yet to show chart</div>;
+    }
+
+    let data = [];
+    if (!isRace) {
+        data = trades.map((t, i) => {
+            let p = t.price;
+            if (t.side === "no") p = 100 - p;
+            return { index: i, Yes: p };
+        });
+        data.push({ index: trades.length, Yes: yesPrice });
+    } else {
+        data = trades.map((t, i) => {
+            const candName = market.candidates?.[t.candidate]?.name.split(" ")[0] || t.candidate;
+            return { index: i, [candName]: t.price };
+        });
+        const cur = { index: trades.length };
+        const tot = Object.values(market.candidates).reduce((s, c) => s + c.shares, 0);
+        Object.entries(market.candidates).forEach(([k, c]) => {
+            cur[c.name.split(" ")[0]] = tot > 0 ? Math.round((c.shares/tot)*100) : 0;
+        });
+        data.push(cur);
+    }
+
+    const colors = ["#818cf8", "#34d399", "#f87171", "#fbbf24", "#c084fc", "#60a5fa"];
+
+    return (
+        <div style={{ height: 160, width: "100%", marginTop: 4 }}>
+            <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data}>
+                    <XAxis dataKey="index" hide />
+                    <YAxis domain={[0, 100]} hide />
+                    <Tooltip 
+                        contentStyle={{ background: "#111113", border: "1px solid #27272a", borderRadius: 8, fontSize: 12, color: "#e4e4e7" }}
+                        itemStyle={{ fontWeight: 600 }}
+                        labelStyle={{ display: "none" }}
+                        cursor={{ stroke: "#27272a", strokeWidth: 1 }}
+                    />
+                    {!isRace ? (
+                        <Line type="monotone" dataKey="Yes" stroke="#34d399" strokeWidth={3} dot={false} isAnimationActive={false} />
+                    ) : (
+                        Object.values(market.candidates).map((c, i) => (
+                            <Line key={c.name} type="monotone" dataKey={c.name.split(" ")[0]} stroke={colors[i % colors.length]} strokeWidth={2} dot={false} connectNulls isAnimationActive={false} />
+                        ))
+                    )}
+                </LineChart>
+            </ResponsiveContainer>
+        </div>
+    );
 }

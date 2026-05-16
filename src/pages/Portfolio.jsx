@@ -3,6 +3,7 @@ import { db } from "../firebase";
 import { collection, onSnapshot, query, where, doc, updateDoc, getDoc } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function Portfolio() {
     const { user, userData } = useAuth();
@@ -91,6 +92,8 @@ export default function Portfolio() {
                     <SC label="P&L" value={`${totalPnl >= 0 ? "+" : ""}₹${totalPnl.toFixed(0)}`} color={totalPnl >= 0 ? "#34d399" : "#f87171"} />
                 </div>
 
+                <PortfolioChart balance={userData?.balance} positions={positions} />
+
                 <Sec title={`POSITIONS (${positions.length})`}>
                     {positions.length === 0 ? <Empty text="No positions — go trade!" /> : positions.map(p => (
                         <div key={p.key} onClick={() => nav(`/markets/${p.mId}`)} style={{ background: "#0c0c0f", borderRadius: 6, padding: "10px 12px", marginBottom: 4, cursor: "pointer" }}>
@@ -157,3 +160,38 @@ export default function Portfolio() {
 function SC({ label, value, color }) { return <div style={{ flex: 1, background: "#111113", border: "1px solid #1a1a1f", borderRadius: 10, padding: "16px 14px" }}><div style={{ color: "#52525b", fontSize: 11, fontWeight: 600, marginBottom: 6 }}>{label}</div><div style={{ color, fontSize: 20, fontWeight: 700 }}>{value}</div></div>; }
 function Sec({ title, children }) { return <div style={{ marginBottom: 24 }}><div style={{ color: "#71717a", fontSize: 11, fontWeight: 600, marginBottom: 10, letterSpacing: 0.5 }}>{title}</div>{children}</div>; }
 function Empty({ text }) { return <div style={{ color: "#3f3f46", fontSize: 13, padding: "16px 0" }}>{text}</div>; }
+
+function PortfolioChart({ balance, positions }) {
+    const pieData = [{ name: "Liquid Balance", value: Math.max(0, balance || 0) }];
+    positions.forEach(p => {
+        if (p.currentValue > 0) {
+            pieData.push({ name: p.isRace ? p.candidateName : p.market.title, value: Math.round(p.currentValue) });
+        }
+    });
+    
+    if (pieData.reduce((s, d) => s + d.value, 0) === 0) return null;
+
+    const colors = ["#818cf8", "#34d399", "#f87171", "#fbbf24", "#c084fc", "#60a5fa", "#e879f9", "#38bdf8"];
+
+    return (
+        <div style={{ height: 230, marginBottom: 28, background: "#111113", borderRadius: 10, border: "1px solid #1a1a1f", padding: "16px 0", display: "flex", flexDirection: "column" }}>
+            <div style={{ color: "#71717a", fontSize: 11, fontWeight: 600, letterSpacing: 0.5, textAlign: "center", marginBottom: 8 }}>ASSET ALLOCATION</div>
+            <div style={{ flex: 1, minHeight: 0 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                        <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={75} stroke="none" paddingAngle={2}>
+                            {pieData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                            ))}
+                        </Pie>
+                        <Tooltip 
+                            contentStyle={{ background: "#0c0c0f", border: "1px solid #27272a", borderRadius: 8, fontSize: 12, color: "#e4e4e7" }}
+                            itemStyle={{ fontWeight: 600 }}
+                            formatter={(value) => `₹${value}`}
+                        />
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+    );
+}
